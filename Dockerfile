@@ -34,11 +34,23 @@ ADD nginx_default.conf /etc/nginx/sites-available/default
 RUN echo "cgi.fix_pathinfo = 0;" >> /etc/php5/fpm/php.ini
 RUN mkdir -p /var/www && chown -R www-data:www-data /var/www
 
+
+# 安装ssh服务
+RUN apt-get update && apt-get install -y openssh-server
+RUN mkdir -p /var/run/sshd
+# 用户名，密码
+RUN echo 'root:12345' | chpasswd
+RUN sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# 取消pam的限制，否则用户登录后就被踢出
+RUN sed -ri 's/session required pam_loginuid.so/#session required pam_loginuid.so/g' /etc/pam.d/sshd
+
 # Supervisord
 RUN apt-get -y install python-setuptools
 RUN easy_install supervisor
 ADD supervisord.conf /etc/supervisord.conf
 
-EXPOSE 80
+EXPOSE 80 22
 
 CMD ["supervisord", "-n", "-c", "/etc/supervisord.conf"]
+CMD ["/usr/sbin/sshd", "-D"]
